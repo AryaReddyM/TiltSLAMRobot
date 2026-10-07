@@ -7,6 +7,8 @@
 #define PWM2 22
 #define DIR2 23
 
+#define DEADZONE 40
+
 CytronMD motorL(PWM_DIR, PWM1, DIR1);
 CytronMD motorR(PWM_DIR, PWM2, DIR2);
 GamepadPtr gamepad;
@@ -19,10 +21,13 @@ void OnConnectedGamepad(GamepadPtr gp) {
 void OnDisconnectedGamepad(GamepadPtr gp) {
     Serial.println("Gamepad disconnected");
     gamepad = nullptr;
+    motorL.setSpeed(0);
+    motorR.setSpeed(0);
 }
 
 void setup() {
   Serial.begin(115200);
+  analogWriteFrequency(20000);
 
   BP32.setup(&OnConnectedGamepad, &OnDisconnectedGamepad);
 }
@@ -35,7 +40,7 @@ void loop() {
     if (millis() - lastUpdate >= 20) {
       lastUpdate = millis();
       
-      int leftY = -(gamepad->axisY());
+      int leftY = (gamepad->axisY());
       int rightX = gamepad->axisRX();
 
       int forwardL = constrain(map(leftY, -512, 512, -255, 255), -255, 255);
@@ -45,8 +50,11 @@ void loop() {
         forwardL -= constrain(map(rightX, -512, 512, -100, 100), -100, 100);
       }
       else if (rightX > 0) { // Turning Right
-        forwardR -= constrain(map(rightX, -512, 512, -100, 100), -100, 100);
+        forwardR += constrain(map(rightX, -512, 512, -100, 100), -100, 100);
       }
+
+      if (abs(leftY) < DEADZONE) leftY = 0;
+      if (abs(rightX) < DEADZONE) rightX = 0;
 
       motorL.setSpeed(forwardL);
       motorR.setSpeed(forwardR);
