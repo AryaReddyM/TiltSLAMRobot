@@ -1,0 +1,9 @@
+{
+  "folders": [
+    { "path": ".", "name": "TiltSLAMRobot" },
+    { "path": "ROS2", "name": "ROS2" }
+  ],
+  "settings": {
+    "files.exclude": { "ROS2": true }
+  }
+}

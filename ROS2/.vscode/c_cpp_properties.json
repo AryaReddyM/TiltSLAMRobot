@@ -1,0 +1,14 @@
+{
+  "configurations": [
+    {
+      "name": "ROS2",
+      "compileCommands": "${workspaceFolder}/build/tiltslam_base/compile_commands.json",
+      "compilerPath": "/usr/bin/g++",
+      "intelliSenseMode": "linux-gcc-arm64",
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "includePath": ["${workspaceFolder}/**", "/opt/ros/jazzy/include/**"]
+    }
+  ],
+  "version": 4
+}

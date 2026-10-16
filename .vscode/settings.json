@@ -1,4 +1,3 @@
 {
-  "C_Cpp.default.compileCommands": "${workspaceFolder}/ROS2/build/tiltslam_base/compile_commands.json",
-  "cmake.sourceDirectory": "/home/aryareddy/TiltSLAMRobot/ROS2/src/tiltslam_base"
+    "cmake.sourceDirectory": "/home/aryareddy/TiltSLAMRobot/ROS2/src/tiltslam_base"
 }
