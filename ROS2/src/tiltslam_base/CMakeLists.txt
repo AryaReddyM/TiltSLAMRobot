@@ -12,20 +12,20 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 
-add_executable(base_node src/base_node.cpp)
-target_include_directories(base_node PUBLIC
+add_executable(esp_comms src/esp_comms.cpp)
+target_include_directories(esp_comms PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
-target_compile_features(base_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(esp_comms PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 ament_target_dependencies(
-  base_node
+  esp_comms
   "rclcpp"
   "geometry_msgs"
   "nav_msgs"
   "tf2_ros"
 )
 
-install(TARGETS base_node
+install(TARGETS esp_comms
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
