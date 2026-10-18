@@ -33,6 +33,9 @@ void setup() {
 }
 
 unsigned long lastUpdate = 0;
+unsigned long lastRead = 0;
+String line;
+
 void loop() {
   BP32.update();
 
@@ -58,6 +61,22 @@ void loop() {
 
       motorL.setSpeed(forwardL);
       motorR.setSpeed(forwardR);
+    }
+  }
+
+  // if (millis() - lastRead >= 1000) {
+  //   lastRead = millis();
+  //   Serial.println("ESP32");
+  // }
+
+  while (Serial.available() > 0) {
+    char c = Serial.read();
+    if (c == '\n') {
+      Serial.print("ESP32: ");
+      Serial.println(line);
+      line = "";
+    } else if (c != '\r') {
+      line += c;
     }
   }
 }

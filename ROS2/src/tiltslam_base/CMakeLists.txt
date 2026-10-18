@@ -12,7 +12,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 
-add_executable(esp_comms src/esp_comms.cpp src/serial_port.cpp)
+add_executable(esp_comms src/esp_comms.cpp)
 target_include_directories(esp_comms PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
