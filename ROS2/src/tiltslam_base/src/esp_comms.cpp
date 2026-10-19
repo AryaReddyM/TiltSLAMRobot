@@ -9,31 +9,58 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
-#include "poll.h"
+#include <poll.h>
+#include "geometry_msgs/msg/twist.hpp"
+#include "tiltslam_base/math_functions.hpp"
 
 using namespace std::chrono_literals;
-
-int fd;
 
 class ESPComms : public rclcpp::Node {
 public:
   ESPComms() : Node("esp_comms") {
+    subscriber = this->create_subscription<geometry_msgs::msg::Twist>("/cmd_vel", 10, 
+            std::bind(&ESPComms::VelCallback, this, std::placeholders::_1));
     timer = this->create_wall_timer(100ms, std::bind(&ESPComms::Tick, this));
 
     fd = openSerial("/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0");
   }
 
+  ~ESPComms() {
+    if (fd >= 0) {
+      close(fd);
+    }
+  }
+
 private:
   void Tick() {
-    std::string line = "V 1.5 -0.5\n";
-    write(fd, line.data(), line.size());
-
     pollfd p{fd, POLL_IN, 0};
     if (poll(&p, 1, 100) > 0) {
       char buf[256];
       ssize_t n = read(fd, buf, sizeof(buf));
       RCLCPP_INFO(this->get_logger(), "%.*s", (int)n, buf);
     }
+  }
+
+  void VelCallback(const geometry_msgs::msg::Twist::SharedPtr msg) {
+    long speed = map(msg->linear.x, -512, 512, -255, 255);
+
+    int angle = (int)msg->angular.z;
+    int speedL = speed;
+    int speedR = speed;
+
+    if (angle < 0) { // Turning Left
+      speedL -= map(angle, -512, 512, -100, 100);
+    }
+    else if (angle > 0) { // Turning Right
+      speedR += map(angle, -512, 512, -100, 100);
+    }
+
+    // Deadzone
+    if (abs(speedL) < 40) speedL = 0;
+    if (abs(speedR) < 40) speedR = 0;
+
+    std::string line = "V " + std::to_string(speedL) + " " + std::to_string(speedR) + "\n";
+    write(fd, line.data(), line.size());
   }
 
 public:
@@ -68,7 +95,9 @@ public:
   }
 
 private:
+  int fd;
   rclcpp::TimerBase::SharedPtr timer;
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber;
 };
 
 int main(int argc, char ** argv) {
@@ -79,7 +108,6 @@ int main(int argc, char ** argv) {
 
   rclcpp::spin(node);
 
-  close(fd);
   rclcpp::shutdown();
   return 0;
 }

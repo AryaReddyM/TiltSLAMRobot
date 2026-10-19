@@ -16,7 +16,7 @@ add_executable(esp_comms src/esp_comms.cpp)
 target_include_directories(esp_comms PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
-target_compile_features(esp_comms PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(esp_comms PUBLIC c_std_99 cxx_std_17)
 ament_target_dependencies(
   esp_comms
   "rclcpp"
@@ -25,7 +25,23 @@ ament_target_dependencies(
   "tf2_ros"
 )
 
-install(TARGETS esp_comms
+add_executable(teleop src/teleop.cpp)
+target_include_directories(teleop PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+)
+target_compile_features(teleop PUBLIC c_std_99 cxx_std_17)
+ament_target_dependencies(
+  teleop
+  "rclcpp"
+  "geometry_msgs"
+  "nav_msgs"
+  "tf2_ros"
+)
+
+install(TARGETS 
+  esp_comms
+  teleop
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

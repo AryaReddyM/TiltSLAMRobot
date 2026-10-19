@@ -33,9 +33,6 @@ void setup() {
 }
 
 unsigned long lastUpdate = 0;
-unsigned long lastRead = 0;
-String line;
-
 void loop() {
   BP32.update();
 
@@ -45,38 +42,6 @@ void loop() {
       
       int leftY = (gamepad->axisY());
       int rightX = gamepad->axisRX();
-
-      int forwardL = constrain(map(leftY, -512, 512, -255, 255), -255, 255);
-      int forwardR = constrain(map(leftY, -512, 512, -255, 255), -255, 255);
-
-      if (rightX < 0) { // Turning Left
-        forwardL -= constrain(map(rightX, -512, 512, -100, 100), -100, 100);
-      }
-      else if (rightX > 0) { // Turning Right
-        forwardR += constrain(map(rightX, -512, 512, -100, 100), -100, 100);
-      }
-
-      if (abs(leftY) < DEADZONE) leftY = 0;
-      if (abs(rightX) < DEADZONE) rightX = 0;
-
-      motorL.setSpeed(forwardL);
-      motorR.setSpeed(forwardR);
-    }
-  }
-
-  // if (millis() - lastRead >= 1000) {
-  //   lastRead = millis();
-  //   Serial.println("ESP32");
-  // }
-
-  while (Serial.available() > 0) {
-    char c = Serial.read();
-    if (c == '\n') {
-      Serial.print("ESP32: ");
-      Serial.println(line);
-      line = "";
-    } else if (c != '\r') {
-      line += c;
     }
   }
 }
