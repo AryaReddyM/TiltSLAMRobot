@@ -11,15 +11,16 @@
 #include <thread>
 #include <poll.h>
 #include "geometry_msgs/msg/twist.hpp"
-#include "tiltslam_base/math_functions.hpp"
+#include "sensor_msgs/msg/joy.hpp"
+#include <sstream>
 
 using namespace std::chrono_literals;
 
 class ESPComms : public rclcpp::Node {
 public:
   ESPComms() : Node("esp_comms") {
-    subscriber = this->create_subscription<geometry_msgs::msg::Twist>("/cmd_vel", 10, 
-            std::bind(&ESPComms::VelCallback, this, std::placeholders::_1));
+    velSubscriber = this->create_subscription<geometry_msgs::msg::Twist>("/cmd_vel", 10, std::bind(&ESPComms::VelCallback, this, std::placeholders::_1));
+    joyPublisher = this->create_publisher<sensor_msgs::msg::Joy>("joy", 10);
     timer = this->create_wall_timer(100ms, std::bind(&ESPComms::Tick, this));
 
     fd = openSerial("/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0");
@@ -33,37 +34,49 @@ public:
 
 private:
   void Tick() {
-    pollfd p{fd, POLL_IN, 0};
-    if (poll(&p, 1, 100) > 0) {
-      char buf[256];
-      ssize_t n = read(fd, buf, sizeof(buf));
-      RCLCPP_INFO(this->get_logger(), "%.*s", (int)n, buf);
+    pollfd p{fd, POLLIN, 0};
+    if (poll(&p, 1, 0) <= 0) return;
+ 
+    char buf[256];
+    ssize_t n = read(fd, buf, sizeof(buf));
+    if (n <= 0) return;
+ 
+    rxBuffer.append(buf, n);
+ 
+    size_t pos;
+    while ((pos = rxBuffer.find('\n')) != std::string::npos) {
+      std::string line = rxBuffer.substr(0, pos);
+      rxBuffer.erase(0, pos + 1);
+      if (!line.empty() && line.back() == '\r') line.pop_back();
+      HandleLine(line);
     }
   }
 
   void VelCallback(const geometry_msgs::msg::Twist::SharedPtr msg) {
-    long speed = map(msg->linear.x, -512, 512, -255, 255);
+    const double wheelRadius = 0.0325;
+    const double trackWidth = 0.197;
+    const double maxWheelSpeed = 13.6;
 
-    int angle = (int)msg->angular.z;
-    int speedL = speed;
-    int speedR = speed;
+    double v = msg->linear.x;
+    double w = msg->angular.z;
 
-    if (angle < 0) { // Turning Left
-      speedL -= map(angle, -512, 512, -100, 100);
+    double leftGround  = v - w * trackWidth / 2.0;
+    double rightGround = v + w * trackWidth / 2.0;
+
+    double left  = leftGround  / wheelRadius;
+    double right = rightGround / wheelRadius;
+
+    double biggest = std::max(std::abs(left), std::abs(right));
+    if (biggest > maxWheelSpeed) {
+      double scale = maxWheelSpeed / biggest;
+      left *= scale;
+      right *= scale;
     }
-    else if (angle > 0) { // Turning Right
-      speedR += map(angle, -512, 512, -100, 100);
-    }
 
-    // Deadzone
-    if (abs(speedL) < 40) speedL = 0;
-    if (abs(speedR) < 40) speedR = 0;
-
-    std::string line = "V " + std::to_string(speedL) + " " + std::to_string(speedR) + "\n";
+    std::string line = "V " + std::to_string(left) + " " + std::to_string(right) + "\n";
     write(fd, line.data(), line.size());
   }
 
-public:
   int openSerial(const std::string& path) {
     int fd = ::open(path.c_str(), O_RDWR | O_NOCTTY);
     if (fd < 0) {
@@ -94,10 +107,27 @@ public:
     return fd;
   }
 
-private:
-  int fd;
+  void HandleLine(const std::string& line) {
+    std::istringstream in(line);
+    std::string type;
+    in >> type;
+ 
+    if (type == "J") {
+      float leftY, rightX;
+      if (!(in >> leftY >> rightX)) return; 
+ 
+      sensor_msgs::msg::Joy msg;
+      msg.header.stamp = this->now();
+      msg.axes = {0.0f, leftY, rightX, 0.0f};
+      joyPublisher->publish(msg);
+    }
+  }
+
+  int fd = -1;
+  std::string rxBuffer;
   rclcpp::TimerBase::SharedPtr timer;
-  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber;
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr velSubscriber;
+  rclcpp::Publisher<sensor_msgs::msg::Joy>::SharedPtr joyPublisher;
 };
 
 int main(int argc, char ** argv) {

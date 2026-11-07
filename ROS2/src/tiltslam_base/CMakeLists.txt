@@ -11,6 +11,7 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 add_executable(esp_comms src/esp_comms.cpp)
 target_include_directories(esp_comms PUBLIC
@@ -23,6 +24,7 @@ ament_target_dependencies(
   "geometry_msgs"
   "nav_msgs"
   "tf2_ros"
+  "sensor_msgs"
 )
 
 add_executable(teleop src/teleop.cpp)
@@ -37,6 +39,7 @@ ament_target_dependencies(
   "geometry_msgs"
   "nav_msgs"
   "tf2_ros"
+  "sensor_msgs"
 )
 
 install(TARGETS 
@@ -55,5 +58,7 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 
 ament_package()

@@ -7,11 +7,17 @@
 #define PWM2 22
 #define DIR2 23
 
-#define DEADZONE 40
+#define MAX_WHEEL_SPEED 13.6
+#define WATCHDOG_MS 300
+#define JOY_PERIOD_MS 20
 
 CytronMD motorL(PWM_DIR, PWM1, DIR1);
 CytronMD motorR(PWM_DIR, PWM2, DIR2);
 GamepadPtr gamepad;
+
+unsigned long lastJoySend = 0;
+unsigned long lastVTime = 0;
+String rxLine;
 
 void OnConnectedGamepad(GamepadPtr gp) {
     Serial.println("Gamepad connected");
@@ -25,6 +31,18 @@ void OnDisconnectedGamepad(GamepadPtr gp) {
     motorR.setSpeed(0);
 }
 
+void handleLine(const String& line) {
+  float left, right;
+  if (sscanf(line.c_str(), "V %f %f", &left, &right) == 2) {
+    int speedL = constrain((int)(left  / MAX_WHEEL_SPEED * 255), -255, 255);
+    int speedR = constrain((int)(right / MAX_WHEEL_SPEED * 255), -255, 255);
+
+    motorL.setSpeed(speedL);
+    motorR.setSpeed(speedR);
+    lastVTime = millis();
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   analogWriteFrequency(20000);
@@ -32,16 +50,43 @@ void setup() {
   BP32.setup(&OnConnectedGamepad, &OnDisconnectedGamepad);
 }
 
-unsigned long lastUpdate = 0;
 void loop() {
   BP32.update();
-
-  if (gamepad && gamepad->isConnected()) {
-    if (millis() - lastUpdate >= 20) {
-      lastUpdate = millis();
-      
-      int leftY = (gamepad->axisY());
-      int rightX = gamepad->axisRX();
+ 
+  while (Serial.available() > 0) {
+    char c = Serial.read();
+ 
+    if (c == '\n') {
+      float left, right;
+      if (sscanf(rxLine.c_str(), "V %f %f", &left, &right) == 2) {
+        int speedL = constrain((int)(left  / MAX_WHEEL_SPEED * 255), -255, 255);
+        int speedR = constrain((int)(right / MAX_WHEEL_SPEED * 255), -255, 255);
+ 
+        motorL.setSpeed(speedL);
+        motorR.setSpeed(speedR);
+        lastVTime = millis();
+      }
+      rxLine = "";
+    } else if (c != '\r') {
+      rxLine += c;
+      if (rxLine.length() > 64) rxLine = "";
     }
+  }
+ 
+  if (gamepad && gamepad->isConnected() && millis() - lastJoySend >= JOY_PERIOD_MS) {
+    lastJoySend = millis();
+ 
+    float leftY = -(gamepad->axisY()  / 512.0f);
+    float rightX = (gamepad->axisRX() / 512.0f);
+ 
+    Serial.print("J ");
+    Serial.print(leftY, 3);
+    Serial.print(" ");
+    Serial.println(rightX, 3);
+  }
+ 
+  if (millis() - lastVTime > WATCHDOG_MS) {
+    motorL.setSpeed(0);
+    motorR.setSpeed(0);
   }
 }
