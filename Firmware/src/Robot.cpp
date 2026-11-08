@@ -11,6 +11,11 @@
 #define WATCHDOG_MS 300
 #define JOY_PERIOD_MS 20
 
+#define LEFT_ENCODER_A 32
+#define LEFT_ENCODER_B 33
+#define RIGHT_ENCODER_A 25
+#define RIGHT_ENCODER_B 26
+
 CytronMD motorL(PWM_DIR, PWM1, DIR1);
 CytronMD motorR(PWM_DIR, PWM2, DIR2);
 GamepadPtr gamepad;
@@ -18,6 +23,9 @@ GamepadPtr gamepad;
 unsigned long lastJoySend = 0;
 unsigned long lastVTime = 0;
 String rxLine;
+
+int leftEncoder = 0;
+int rightEncoder = 0;
 
 void OnConnectedGamepad(GamepadPtr gp) {
     Serial.println("Gamepad connected");
@@ -83,6 +91,8 @@ void loop() {
     Serial.print(leftY, 3);
     Serial.print(" ");
     Serial.println(rightX, 3);
+
+    Serial.print("E ");
   }
  
   if (millis() - lastVTime > WATCHDOG_MS) {
